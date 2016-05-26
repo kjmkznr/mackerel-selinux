@@ -1,0 +1,224 @@
+#######################################
+## <summary>
+##	mackerel agent can exec df and ip, uname commands
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`mackerel_exec',`
+	gen_require(`
+		type mackerel_exec_t;
+	')
+
+	corecmd_search_bin($1)
+	can_exec($1, mackerel_exec_t)
+	corecmd_exec_bin($1, bin_t)
+
+  read_files_pattern(mackerel_t, shell_exec_t, shell_exec_t)
+  corecmd_check_exec_shell($1)
+  allow $1 shell_exec_t:file { execute_no_trans };
+')
+
+interface(`mackerel_search_lib',`
+	gen_require(`
+		type mackerel_var_lib_t;
+	')
+
+	allow $1 mackerel_var_lib_t:dir search_dir_perms;
+	files_search_var_lib($1)
+')
+
+#######################################
+## <summary>
+##	mackerel agent read write /var/lib/mackerel-agent
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`mackerel_rw_lib_files',`
+	gen_require(`
+		type mackerel_var_lib_t;
+	')
+
+	files_search_var_lib($1)
+	read_files_pattern($1, mackerel_var_lib_t, mackerel_var_lib_t)
+	write_files_pattern($1, mackerel_var_lib_t, mackerel_var_lib_t)
+')
+
+interface(`mackerel_lib_filetrans',`
+	gen_require(`
+		type mackerel_var_lib_t;
+	')
+
+	filetrans_pattern($1, mackerel_var_lib_t, $2, $3, $4)
+')
+
+interface(`mackerel_read_pid_files',`
+	gen_require(`
+		type mackerel_var_run_t;
+	')
+
+	files_search_var_lib($1)
+	read_files_pattern($1, mackerel_var_run_t, mackerel_var_run_t)
+')
+
+#######################################
+## <summary>
+##	mackerel agent access log and pid files
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`mackerel_filetrans_named_content',`
+	gen_require(`
+		type mackerel_var_run_t;
+    type mackerel_var_lib_t;
+    type mackerel_log_t;
+	')
+
+	files_pid_filetrans($1, mackerel_var_run_t, file, "mackerel-agent.pid")
+	files_var_lib_filetrans($1, mackerel_var_lib_t, dir, "mackerel-agent")
+
+  logging_log_file(mackerel_log_t)
+  append_files_pattern($1, mackerel_log_t, mackerel_log_t)
+  create_files_pattern($1, mackerel_log_t, mackerel_log_t)
+  setattr_files_pattern($1, mackerel_log_t, mackerel_log_t)
+	logging_log_filetrans($1, mackerel_log_t, file, "mackerel-agent.log")
+')
+
+#######################################
+## <summary>
+##	mackerel connect api server.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`mackerel_tcp_connect_http_port',`
+	gen_require(`
+		type http_port_t;
+	')
+
+	allow $1 http_port_t:tcp_socket name_connect;
+')
+
+#######################################
+## <summary>
+##	Get attribute filesystem
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`mackerel_getattr_filesystems',`
+  gen_require(`
+    type configfs_t;
+    type efivarfs_t;
+    type fusefs_t;
+    type cgroup_t;
+    type debugfs_t;
+    type tmpfs_t;
+    type home_root_t;
+    type portage_ebuild_t;
+    type tmp_t;
+    type device_t;
+    type consolekit_var_run_t;
+    type sysctl_fs_t;
+    type binfmt_misc_fs_t;
+    type fs_t;
+  ')
+
+  allow $1 consolekit_var_run_t:dir search;
+
+  getattr_filesystems($1, tmpfs_t)
+  getattr_filesystems($1, tmp_t)
+  getattr_filesystems($1, sysctl_fs_t)
+  getattr_filesystems($1, home_root_t)
+  getattr_filesystems($1, fusefs_t)
+  getattr_filesystems($1, fs_t)
+  getattr_filesystems($1, efivarfs_t)
+  getattr_filesystems($1, device_t)
+  getattr_filesystems($1, debugfs_t)
+  getattr_filesystems($1, configfs_t)
+  getattr_filesystems($1, cgroup_t)
+  getattr_filesystems($1, binfmt_misc_fs_t)
+  ifdef(`distro_gentoo',`
+    getattr_filesystems($1, portage_ebuild_t)
+  ')
+')
+
+#######################################
+## <summary>
+##	Get attribute filesystem
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`getattr_filesystems',`
+  gen_require(`
+    type $2;
+  ')
+
+  allow $1 $2:dir { search getattr };
+  allow $1 $2:filesystem getattr;
+')
+
+#######################################
+## <summary>
+##	The template to define a mackerel plugin domain.
+## </summary>
+## <param name="domain_prefix">
+##	<summary>
+##	Domain prefix to be used.
+##	</summary>
+## </param>
+#
+template(`mackerel_plugin_template',`
+	gen_require(`
+		attribute mackerel_plugin_domain;
+		type mackerel_t;
+    type node_t;
+	')
+
+	########################################
+	#
+	# Declarations
+	#
+
+	type mackerel_$1_plugin_t, mackerel_plugin_domain;
+	type mackerel_$1_plugin_exec_t;
+	application_domain(mackerel_$1_plugin_t, mackerel_$1_plugin_exec_t)
+	role system_r types mackerel_$1_plugin_t;
+
+	########################################
+	#
+	# Policy
+	#
+
+	corecmd_search_bin(mackerel_$1_plugin_t)
+	allow mackerel_t mackerel_$1_plugin_exec_t:file ioctl; 
+  allow mackerel_$1_plugin_t self:process { getsched };
+  allow mackerel_$1_plugin_t tmp_t:dir { search_dir_perms };
+  allow mackerel_$1_plugin_t tmp_t:file { read_file_perms write_file_perms };
+  allow mackerel_$1_plugin_t node_t:tcp_socket { node_bind };
+  read_files_pattern(mackerel_$1_plugin_t, mackerel_tmp_t, mackerel_tmp_t)
+  write_files_pattern(mackerel_$1_plugin_t, mackerel_tmp_t, mackerel_tmp_t)
+
+	domtrans_pattern(mackerel_t, mackerel_$1_plugin_exec_t, mackerel_$1_plugin_t)
+')

@@ -1,0 +1,92 @@
+policy_module(mackerel, 1.0.0)
+
+########################################
+#
+# Declarations
+#
+
+attribute mackerel_plugin_domain;
+
+type mackerel_t;
+type mackerel_exec_t;
+init_daemon_domain(mackerel_t, mackerel_exec_t)
+
+type mackerel_tmp_t;
+files_tmp_file(mackerel_tmp_t)
+files_poly_parent(mackerel_tmp_t)
+
+type mackerel_var_run_t;
+files_pid_file(mackerel_var_run_t)
+
+type mackerel_config_t;
+files_config_file(mackerel_config_t)
+
+type mackerel_log_t;
+logging_log_file(mackerel_log_t)
+
+type mackerel_var_lib_t;
+files_type(mackerel_var_lib_t)
+
+mackerel_plugin_template(upower)
+
+
+########################################
+#
+# Local policy
+#
+
+allow mackerel_t self:process { getsched };
+
+allow mackerel_t mackerel_config_t:dir list_dir_perms;
+read_files_pattern(mackerel_t, mackerel_config_t, mackerel_config_t)
+read_lnk_files_pattern(mackerel_t, mackerel_config_t, mackerel_config_t)
+
+mackerel_search_lib(mackerel_t)
+mackerel_rw_lib_files(mackerel_t)
+mackerel_filetrans_named_content(mackerel_t)
+
+read_files_pattern(mackerel_t, mackerel_tmp_t, mackerel_tmp_t)
+write_files_pattern(mackerel_t, mackerel_tmp_t, mackerel_tmp_t)
+
+manage_files_pattern(mackerel_t, mackerel_var_run_t, mackerel_var_run_t)
+files_pid_filetrans(mackerel_t, mackerel_var_run_t, file)
+
+kernel_search_network_sysctl(mackerel_t)
+kernel_read_net_sysctls(mackerel_t)
+kernel_read_kernel_sysctls(mackerel_t)
+kernel_read_system_state(mackerel_t)
+kernel_read_network_state(mackerel_t)
+dev_list_sysfs(mackerel_t)
+dev_read_sysfs(mackerel_t)
+
+miscfiles_read_localization(mackerel_t)
+
+allow mackerel_t self:tcp_socket create_stream_socket_perms;
+allow mackerel_t self:udp_socket create_stream_socket_perms;
+mackerel_tcp_connect_http_port(mackerel_t)
+
+sysnet_read_config(mackerel_t);
+files_dontaudit_read_etc_files(mackerel_t)
+sysnet_exec_ifconfig(mackerel_t)
+
+mackerel_exec(mackerel_t)
+allow mackerel_t self:fifo_file rw_fifo_file_perms;
+
+miscfiles_read_all_certs(mackerel_t)
+
+# ip
+allow mackerel_t self:netlink_route_socket { create_socket_perms nlmsg_read };
+allow mackerel_t self:unix_dgram_socket { create_socket_perms };
+
+# df
+mackerel_getattr_filesystems(mackerel_t)
+
+#######################################
+#
+# UPower local policy
+#     
+dbus_system_bus_client(mackerel_upower_plugin_t)
+devicekit_dbus_chat_power(mackerel_upower_plugin_t)
+miscfiles_read_localization(mackerel_upower_plugin_t)
+allow mackerel_upower_plugin_t self:tcp_socket create_stream_socket_perms;
+kernel_read_net_sysctls(mackerel_upower_plugin_t)
