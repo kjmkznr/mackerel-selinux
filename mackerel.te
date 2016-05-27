@@ -48,6 +48,10 @@ mackerel_filetrans_named_content(mackerel_t)
 read_files_pattern(mackerel_t, mackerel_tmp_t, mackerel_tmp_t)
 write_files_pattern(mackerel_t, mackerel_tmp_t, mackerel_tmp_t)
 
+allow mackerel_t tmp_t:dir { add_name write };
+allow mackerel_t tmp_t:file { read create write open };
+
+
 manage_files_pattern(mackerel_t, mackerel_var_run_t, mackerel_var_run_t)
 files_pid_filetrans(mackerel_t, mackerel_var_run_t, file)
 
