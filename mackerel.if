@@ -139,6 +139,8 @@ interface(`mackerel_getattr_filesystems',`
     type sysctl_fs_t;
     type binfmt_misc_fs_t;
     type fs_t;
+    type pstore_t;
+    type user_runtime_root_t;
   ')
 
   allow $1 consolekit_var_run_t:dir search;

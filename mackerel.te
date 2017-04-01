@@ -84,6 +84,9 @@ allow mackerel_t self:unix_dgram_socket { create_socket_perms };
 
 # df
 mackerel_getattr_filesystems(mackerel_t)
+dontaudit mackerel_t pstore_t:dir { getattr };
+dontaudit mackerel_t pstore_t:filesystem { getattr };
+dontaudit mackerel_t user_runtime_root_t:dir { search };
 
 #######################################
 #
